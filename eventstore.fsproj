@@ -6,6 +6,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Infrastructure/Types.fs" />
+    <Compile Include="Infrastructure/EventStore.fs" />
+    <Compile Include="Domain.fs" />
+    <Compile Include="Tests.fs" />
+    <Compile Include="Helper.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
