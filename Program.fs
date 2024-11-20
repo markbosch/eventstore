@@ -2,25 +2,37 @@
 open Helper.Print
 open Domain
 open Projections
+open Application.Api
 open Tests.Domain
 
 runTests()
 
 let eventStore : EventStore<Event> = EventStore.initialize()
 
-let truck1 = System.Guid.NewGuid()
-let truck2 = System.Guid.NewGuid()
+let queryHandler =
+  QueryHandler.initialize
+    [
+        Application.QueryHandlers.flavours eventStore
+    ]
 
-eventStore.Evolve truck1 (Behavior.sellFlavour Vanilla)
-eventStore.Evolve truck1 (Behavior.sellFlavour Strawberry)
-eventStore.Evolve truck1 (Behavior.restock Vanilla 3)
-eventStore.Evolve truck1 (Behavior.sellFlavour Vanilla)
+let guid (Truck truck) = truck
 
-eventStore.Evolve truck2 (Behavior.sellFlavour Vanilla)
+let truck1 = Truck <| System.Guid.NewGuid()
+let truck2 = Truck <| System.Guid.NewGuid()
+
+let truck1_guid = guid truck1
+let truck2_guid = guid truck2
+
+eventStore.Evolve truck1_guid (Behavior.sellFlavour Vanilla)
+eventStore.Evolve truck1_guid (Behavior.sellFlavour Strawberry)
+eventStore.Evolve truck1_guid (Behavior.restock Vanilla 3)
+eventStore.Evolve truck1_guid (Behavior.sellFlavour Vanilla)
+
+eventStore.Evolve truck2_guid (Behavior.sellFlavour Vanilla)
 
 
-let eventsTruck1 = eventStore.GetStream truck1
-let eventsTruck2 = eventStore.GetStream truck2
+let eventsTruck1 = eventStore.GetStream truck1_guid
+let eventsTruck2 = eventStore.GetStream truck2_guid
 
 
 
@@ -43,3 +55,28 @@ printSoldFlavour Strawberry sold
 
 let stock =
     eventsTruck1 |> project flavoursInStock
+
+// -- Queries
+let queries =
+  [
+    ("FlavourInStockOfTruck (truck1, Vanilla)",
+      fun () -> FlavourInStockOfTruck (truck1, Vanilla)
+                |> queryHandler.Handle
+                |> printQueryResults "Stock Truck One Vanilla")
+  ]
+
+FlavourInStockOfTruck (truck1, Vanilla)
+  |> queryHandler.Handle
+  |> printQueryResults "Stock Truck One Vanilla"
+
+FlavoursSoldOfTruck (truck1, Vanilla)
+  |> queryHandler.Handle
+  |> printQueryResults "Flavour Vanilla sold in Truck One"
+
+FlavourInStockOfAll (Vanilla)
+  |> queryHandler.Handle
+  |> printQueryResults "Stock of Vanilla in all trucks"
+
+FlavoursSoldOfAll (Vanilla)
+  |> queryHandler.Handle
+  |> printQueryResults "Sold Vanilla flavour in all trucks"      
